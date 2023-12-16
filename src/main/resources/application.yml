@@ -7,8 +7,18 @@ spring:
     username: root
     password: 123456
     url: jdbc:mysql://localhost:3306/yupi
+    # session 失效时间
+  elasticsearch:
+    connection-timeout: 86400
 server:
   port: 8080
+  servlet:
+    context-path: /api
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
+  global-config:
+    db-config:
+      logic-delete-field: isDelete
+      logic-delete-value: 1
+      logic-not-delete-value: 0
