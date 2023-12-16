@@ -2,19 +2,24 @@ package com.yupi.usercenterbackend.controller;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.yupi.usercenterbackend.constant.UserConstant;
-import com.yupi.usercenterbackend.model.User;
-import com.yupi.usercenterbackend.model.request.UserLoginRequest;
-import com.yupi.usercenterbackend.model.request.UserRegisterRequest;
+import com.yupi.usercenterbackend.common.BaseResponse;
+import com.yupi.usercenterbackend.common.ErrorCode;
+import com.yupi.usercenterbackend.common.ResultUtils;
+import com.yupi.usercenterbackend.exception.BusinessException;
+import com.yupi.usercenterbackend.model.domain.User;
+import com.yupi.usercenterbackend.model.domain.request.UserLoginRequest;
+import com.yupi.usercenterbackend.model.domain.request.UserRegisterRequest;
 import com.yupi.usercenterbackend.service.UserService;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static com.yupi.usercenterbackend.constant.UserConstant.ADMIN_ROLE;
+import static com.yupi.usercenterbackend.constant.UserConstant.USER_LOGIN_STATE;
 
 @RestController
 @RequestMapping("/user")
@@ -23,75 +28,122 @@ public class UserController {
     @Resource
     private UserService userService;
 
+    /**
+     * 用户注册
+     *
+     * @param userRegisterRequest
+     * @return
+     */
     @PostMapping("/register")
-    public Long register(@RequestBody UserRegisterRequest userRegisterRequest){
-        if (userRegisterRequest==null){
-            return null;
+    public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
+        // 校验
+        if (userRegisterRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         String userAccount = userRegisterRequest.getUserAccount();
-        String password = userRegisterRequest.getPassword();
+        String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
-        if (StringUtils.isAnyBlank(userAccount,password,checkPassword)){
+        String planetCode = userRegisterRequest.getPlanetCode();
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
             return null;
         }
-        return userService.userRegister(userAccount, password, checkPassword);
-    }
-
-    @PostMapping("/login")
-    public User login(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request){
-        if (userLoginRequest==null){
-            return null;
-        }
-        String userAccount = userLoginRequest.getUserAccount();
-        String password = userLoginRequest.getUserPassword();
-        if (StringUtils.isAnyBlank(userAccount,password)){
-            return null;
-        }
-        return userService.userLogin(userAccount, password,request);
-    }
-
-    @GetMapping("/current")
-    public User getCurrentUser(HttpServletRequest request){
-        User userObj = (User)request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
-        if (userObj == null){
-            return null;
-        }
-        User user = userService.getById(userObj.getId());
-        return  userService.getSafe(user);
-    }
-
-    @GetMapping("/search")
-    public List<User> getUserList(String username, HttpServletRequest request){
-        if (!isAdmin(request)){
-            return new ArrayList<>();
-        }
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.lambda()
-                .like(StringUtils.isNotBlank(username),User::getUsername,username);
-        List<User> userList = userService.list(queryWrapper);
-        return userList.stream().map(user -> userService.getSafe(user)).collect(Collectors.toList());
-    }
-
-    @PostMapping("/delete")
-    public boolean deleteUser(@RequestBody long id, HttpServletRequest request){
-        if (!isAdmin(request)){
-            return false;
-        }
-        if (id <= 0){
-            return false;
-        }
-        return userService.removeById(id);
+        long result = userService.userRegister(userAccount, userPassword, checkPassword, planetCode);
+        return ResultUtils.success(result);
     }
 
     /**
-     * 是否为管理员
+     * 用户登录
+     *
+     * @param userLoginRequest
      * @param request
      * @return
      */
-    private boolean isAdmin(HttpServletRequest request){
-        //鉴权，仅管理员可查询
-        HttpSession session = request.getSession();
-        User user = (User) session.getAttribute(UserConstant.USER_LOGIN_STATE);
-        return user != null && user.getUserRole() == UserConstant.ADMIN_ROLE;
+    @PostMapping("/login")
+    public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
+        if (userLoginRequest == null) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR);
+        }
+        String userAccount = userLoginRequest.getUserAccount();
+        String userPassword = userLoginRequest.getUserPassword();
+        if (StringUtils.isAnyBlank(userAccount, userPassword)) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR);
+        }
+        User user = userService.userLogin(userAccount, userPassword, request);
+        return ResultUtils.success(user);
+    }
+
+    /**
+     * 用户注销
+     *
+     * @param request
+     * @return
+     */
+    @PostMapping("/logout")
+    public BaseResponse<Integer> userLogout(HttpServletRequest request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        int result = userService.userLogout(request);
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 获取当前用户
+     *
+     * @param request
+     * @return
+     */
+    @GetMapping("/current")
+    public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        long userId = currentUser.getId();
+        // TODO 校验用户是否合法
+        User user = userService.getById(userId);
+        User safetyUser = userService.getSafetyUser(user);
+        return ResultUtils.success(safetyUser);
+    }
+
+    @GetMapping("/search")
+    public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
+        if (!isAdmin(request)) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "缺少管理员权限");
+        }
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        if (StringUtils.isNotBlank(username)) {
+            queryWrapper.like("username", username);
+        }
+        List<User> userList = userService.list(queryWrapper);
+        List<User> list = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+        return ResultUtils.success(list);
+    }
+
+    @PostMapping("/delete")
+    public BaseResponse<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request) {
+        if (!isAdmin(request)) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        if (id <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        boolean b = userService.removeById(id);
+        return ResultUtils.success(b);
+    }
+
+
+    /**
+     * 是否为管理员
+     *
+     * @param request
+     * @return
+     */
+    private boolean isAdmin(HttpServletRequest request) {
+        // 仅管理员可查询
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User user = (User) userObj;
+        return user != null && user.getUserRole() == ADMIN_ROLE;
     }
 }

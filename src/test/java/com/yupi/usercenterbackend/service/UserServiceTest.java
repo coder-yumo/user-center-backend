@@ -1,6 +1,6 @@
 package com.yupi.usercenterbackend.service;
 
-import com.yupi.usercenterbackend.model.User;
+import com.yupi.usercenterbackend.model.domain.User;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -37,28 +37,29 @@ class UserServiceTest {
         String userAccount ="yupi";
         String password ="";
         String checkPassword ="123456";
-        long result = userService.userRegister(userAccount,password,checkPassword);
+        String planetCode ="12345";
+        long result = userService.userRegister(userAccount,password,checkPassword, planetCode);
         Assert.assertEquals(-1,result);
         userAccount = "yu";
-        result = userService.userRegister(userAccount,password,checkPassword);
+        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
         Assert.assertEquals(-1,result);
         userAccount = "yupi";
         password ="123456";
-        result = userService.userRegister(userAccount,password,checkPassword);
+        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
         Assert.assertEquals(-1,result);
         userAccount = "yu pi";
         password ="12345678";
-        result = userService.userRegister(userAccount,password,checkPassword);
+        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
         Assert.assertEquals(-1,result);
         checkPassword ="123456789";
-        result = userService.userRegister(userAccount,password,checkPassword);
+        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
         Assert.assertEquals(-1,result);
         userAccount = "123";
         checkPassword ="12345678";
-        result = userService.userRegister(userAccount,password,checkPassword);
+        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
         Assert.assertEquals(-1,result);
-        userAccount = "yupi";
-        result = userService.userRegister(userAccount,password,checkPassword);
+        userAccount = "yupi11122";
+        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
         Assert.assertTrue(result>0);
     }
 }
