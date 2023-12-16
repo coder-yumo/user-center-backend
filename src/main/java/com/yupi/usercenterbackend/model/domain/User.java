@@ -1,13 +1,9 @@
-package com.yupi.usercenterbackend.model;
+package com.yupi.usercenterbackend.model.domain;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-
+import com.baomidou.mybatisplus.annotation.*;
 import java.io.Serializable;
 import java.util.Date;
+import lombok.Data;
 
 /**
  * 用户表
@@ -17,23 +13,23 @@ import java.util.Date;
 @Data
 public class User implements Serializable {
     /**
-     * 主键
+     * id
      */
     @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
-     * 昵称
+     * 用户昵称
      */
     private String username;
 
     /**
-     * 登录账号
+     * 账号
      */
     private String userAccount;
 
     /**
-     * 头像
+     * 用户头像
      */
     private String avatarUrl;
 
@@ -48,7 +44,7 @@ public class User implements Serializable {
     private String userPassword;
 
     /**
-     * 电话号码
+     * 电话
      */
     private String phone;
 
@@ -58,7 +54,7 @@ public class User implements Serializable {
     private String email;
 
     /**
-     * 用户状态0-正常
+     * 状态 0 - 正常
      */
     private Integer userStatus;
 
@@ -68,19 +64,27 @@ public class User implements Serializable {
     private Date createTime;
 
     /**
-     * 
+     *
      */
     private Date updateTime;
 
     /**
      * 是否删除
      */
+    @TableLogic
     private Integer isDelete;
 
     /**
-     * 
+     * 用户角色 0 - 普通用户 1 - 管理员
      */
     private Integer userRole;
+
+    /**
+     * 星球编号
+     */
+    private String planetCode;
+
+    // https://github.com/liyupi
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
