@@ -1,12 +1,13 @@
 package com.yupi.usercenterbackend.service;
 
 import com.yupi.usercenterbackend.model.domain.User;
+import java.util.Arrays;
+import java.util.List;
+import javax.annotation.Resource;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-
-import javax.annotation.Resource;
 
 /**
  * 用户服务测试
@@ -20,8 +21,8 @@ class UserServiceTest {
     @Test
     void testAddUser(){
         User user = new User();
-        user.setUsername("dogYupi");
-        user.setUserAccount("123");
+        user.setUsername("dogYupi11");
+        user.setUserAccount("123111");
         user.setAvatarUrl("https://thirdwx.qlogo.cn/mmopen/vi_32/AUpl4UT9k4TD5GqoCgHG8dEnlHuMbGhB10Uic06euXjbWhlu9kb6PwzsTq1e1aewmFnBKcDGqX1HUltp3YHFPUA/132");
         user.setGender(0);
         user.setUserPassword("xxx");
@@ -61,5 +62,11 @@ class UserServiceTest {
         userAccount = "yupi11122";
         result = userService.userRegister(userAccount,password,checkPassword, planetCode);
         Assert.assertTrue(result>0);
+    }
+    @Test
+    public void queryUsersByTags(){
+        List<String> tagNameList = Arrays.asList("java","python");
+        List<User> users = userService.queryUsersByTags(tagNameList);
+        Assert.assertNotNull(users);
     }
 }
