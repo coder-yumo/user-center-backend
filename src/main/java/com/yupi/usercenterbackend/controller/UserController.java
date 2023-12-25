@@ -30,7 +30,8 @@ public class UserController {
 
     /**
      * 用户注册
-     *
+     *9
+     * +
      * @param userRegisterRequest
      * @return
      */
@@ -119,6 +120,12 @@ public class UserController {
         List<User> userList = userService.list(queryWrapper);
         List<User> list = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
         return ResultUtils.success(list);
+    }
+
+    @GetMapping("/searchByTags")
+    public BaseResponse<List<User>> searchByTags(@RequestBody List<String> tagNameList) {
+        List<User> users = userService.queryUsersByTags(tagNameList);
+        return ResultUtils.success(users);
     }
 
     @PostMapping("/delete")

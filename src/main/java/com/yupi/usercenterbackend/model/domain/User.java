@@ -64,7 +64,7 @@ public class User implements Serializable {
     private Date createTime;
 
     /**
-     *
+     *  修改时间
      */
     private Date updateTime;
 
@@ -83,6 +83,11 @@ public class User implements Serializable {
      * 星球编号
      */
     private String planetCode;
+
+    /**
+     * 标签列表JSON
+     */
+    private String tags;
 
     // https://github.com/liyupi
 
