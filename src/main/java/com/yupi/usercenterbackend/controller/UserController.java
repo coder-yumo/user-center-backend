@@ -7,10 +7,13 @@ import com.yupi.usercenterbackend.common.ErrorCode;
 import com.yupi.usercenterbackend.common.ResultUtils;
 import com.yupi.usercenterbackend.exception.BusinessException;
 import com.yupi.usercenterbackend.model.domain.User;
+import com.yupi.usercenterbackend.model.domain.request.CurrentUserRequest;
 import com.yupi.usercenterbackend.model.domain.request.UserLoginRequest;
 import com.yupi.usercenterbackend.model.domain.request.UserRegisterRequest;
 import com.yupi.usercenterbackend.service.UserService;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -18,20 +21,24 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.yupi.usercenterbackend.constant.UserConstant.ADMIN_ROLE;
-import static com.yupi.usercenterbackend.constant.UserConstant.USER_LOGIN_STATE;
+import static com.yupi.usercenterbackend.constant.RedisConstant.TOKEN_KEY;
 
 @RestController
 @RequestMapping("/user")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8000"})
 public class UserController {
 
     @Resource
     private UserService userService;
 
+    @Resource
+    RedisTemplate redisTemplate;
+
     /**
      * 用户注册
-     *9
+     * 9
      * +
+     *
      * @param userRegisterRequest
      * @return
      */
@@ -60,17 +67,18 @@ public class UserController {
      * @return
      */
     @PostMapping("/login")
-    public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
+    public BaseResponse<String> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
         if (userLoginRequest == null) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR);
         }
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
+        String uuid = userLoginRequest.getUuid();
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR);
         }
-        User user = userService.userLogin(userAccount, userPassword, request);
-        return ResultUtils.success(user);
+        String key = userService.userLogin(userAccount, userPassword, uuid, request);
+        return ResultUtils.success(key);
     }
 
     /**
@@ -80,39 +88,38 @@ public class UserController {
      * @return
      */
     @PostMapping("/logout")
-    public BaseResponse<Integer> userLogout(HttpServletRequest request) {
-        if (request == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        int result = userService.userLogout(request);
+    public BaseResponse<Integer> userLogout(@RequestBody CurrentUserRequest userRequest) {
+        String key = TOKEN_KEY + userRequest.getUuid();
+        Integer result = Math.toIntExact(redisTemplate.opsForHash().delete(key, userRequest.getUserAccount()));
         return ResultUtils.success(result);
     }
 
     /**
      * 获取当前用户
      *
-     * @param request
+     * @param userRequest
      * @return
      */
     @GetMapping("/current")
-    public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if (currentUser == null) {
+    public BaseResponse<User> getCurrentUser(CurrentUserRequest userRequest) {
+        String key = TOKEN_KEY + userRequest.getUuid();
+        System.out.println("key = " + key);
+        User user = (User) redisTemplate.opsForHash().get(key, userRequest.getUserAccount());
+        if (user == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
-        long userId = currentUser.getId();
-        // TODO 校验用户是否合法
-        User user = userService.getById(userId);
-        User safetyUser = userService.getSafetyUser(user);
-        return ResultUtils.success(safetyUser);
+        return ResultUtils.success(user);
     }
 
     @GetMapping("/search")
-    public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
-        if (!isAdmin(request)) {
-            throw new BusinessException(ErrorCode.NO_AUTH, "缺少管理员权限");
+    public BaseResponse<List<User>> searchUsers(String currentUserAccount, String username) {
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.lambda().eq(User::getUserAccount, currentUserAccount);
+        User currentUser = userService.getOne(wrapper);
+        if (currentUser.getUserRole() == 0) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
         }
+
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         if (StringUtils.isNotBlank(username)) {
             queryWrapper.like("username", username);
@@ -122,17 +129,18 @@ public class UserController {
         return ResultUtils.success(list);
     }
 
-    @GetMapping("/searchByTags")
-    public BaseResponse<List<User>> searchByTags(@RequestBody List<String> tagNameList) {
+    @GetMapping("/search/tags")
+    public BaseResponse<List<User>> searchByTags(@RequestParam(required = false) List<String> tagNameList) {
+        System.out.println("tagNameList = " + tagNameList);
+        if (CollectionUtils.isEmpty(tagNameList)) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
         List<User> users = userService.queryUsersByTags(tagNameList);
         return ResultUtils.success(users);
     }
 
     @PostMapping("/delete")
-    public BaseResponse<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request) {
-        if (!isAdmin(request)) {
-            throw new BusinessException(ErrorCode.NO_AUTH);
-        }
+    public BaseResponse<Boolean> deleteUser(@RequestBody long id) {
         if (id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -141,16 +149,4 @@ public class UserController {
     }
 
 
-    /**
-     * 是否为管理员
-     *
-     * @param request
-     * @return
-     */
-    private boolean isAdmin(HttpServletRequest request) {
-        // 仅管理员可查询
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User user = (User) userObj;
-        return user != null && user.getUserRole() == ADMIN_ROLE;
-    }
 }
