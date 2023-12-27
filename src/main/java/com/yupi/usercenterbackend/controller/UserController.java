@@ -2,30 +2,36 @@ package com.yupi.usercenterbackend.controller;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yupi.usercenterbackend.common.BaseResponse;
 import com.yupi.usercenterbackend.common.ErrorCode;
 import com.yupi.usercenterbackend.common.ResultUtils;
 import com.yupi.usercenterbackend.exception.BusinessException;
 import com.yupi.usercenterbackend.model.domain.User;
+import com.yupi.usercenterbackend.model.domain.dto.UserDTO;
 import com.yupi.usercenterbackend.model.domain.request.CurrentUserRequest;
+import com.yupi.usercenterbackend.model.domain.request.SearchUserByTagsRequest;
 import com.yupi.usercenterbackend.model.domain.request.UserLoginRequest;
 import com.yupi.usercenterbackend.model.domain.request.UserRegisterRequest;
 import com.yupi.usercenterbackend.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.yupi.usercenterbackend.constant.RedisConstant.TOKEN_KEY;
+import static com.yupi.usercenterbackend.constant.RedisConstant.USER_SEARCH_KEY;
 
 @RestController
 @RequestMapping("/user")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8000"})
+@Slf4j
 public class UserController {
 
     @Resource
@@ -63,11 +69,10 @@ public class UserController {
      * 用户登录
      *
      * @param userLoginRequest
-     * @param request
      * @return
      */
     @PostMapping("/login")
-    public BaseResponse<String> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
+    public BaseResponse<String> userLogin(@RequestBody UserLoginRequest userLoginRequest) {
         if (userLoginRequest == null) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR);
         }
@@ -77,14 +82,14 @@ public class UserController {
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR);
         }
-        String key = userService.userLogin(userAccount, userPassword, uuid, request);
+        String key = userService.userLogin(userAccount, userPassword, uuid);
         return ResultUtils.success(key);
     }
 
     /**
      * 用户注销
      *
-     * @param request
+     * @param userRequest
      * @return
      */
     @PostMapping("/logout")
@@ -108,7 +113,10 @@ public class UserController {
         if (user == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
-        return ResultUtils.success(user);
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.lambda().eq(User::getUserAccount, user.getUserAccount());
+        User one = userService.getOne(queryWrapper);
+        return ResultUtils.success(one);
     }
 
     @GetMapping("/search")
@@ -129,13 +137,34 @@ public class UserController {
         return ResultUtils.success(list);
     }
 
+    @GetMapping("/recommend")
+    public BaseResponse<Page<User>> recommendUsers(long pageSize, long pageNum, String userAccount, String uuid) {
+        User loginUser = userService.getLoginUser(userAccount, uuid);
+        String key = USER_SEARCH_KEY + loginUser.getId();
+        //有缓存，直接读缓存
+        Page<User> userPage = (Page<User>) redisTemplate.opsForValue().get(key);
+        if (userPage != null) {
+            return ResultUtils.success(userPage);
+        }
+        //没有直接查询数据库
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        userPage = userService.page(new Page<>(pageNum, pageSize), queryWrapper);
+        //写缓存
+        try {
+            redisTemplate.opsForValue().set(key,userPage,1, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.error("redis set key error");
+        }
+        return ResultUtils.success(userPage);
+    }
+
     @GetMapping("/search/tags")
-    public BaseResponse<List<User>> searchByTags(@RequestParam(required = false) List<String> tagNameList) {
-        System.out.println("tagNameList = " + tagNameList);
-        if (CollectionUtils.isEmpty(tagNameList)) {
+    public BaseResponse<Page<User>> searchByTags(SearchUserByTagsRequest byTagsRequest) {
+        System.out.println("tagNameList = " + byTagsRequest);
+        if (CollectionUtils.isEmpty(byTagsRequest.getTagNameList())) {
             throw new BusinessException(ErrorCode.NULL_ERROR);
         }
-        List<User> users = userService.queryUsersByTags(tagNameList);
+        Page<User> users = userService.queryUsersByTags(byTagsRequest);
         return ResultUtils.success(users);
     }
 
@@ -146,6 +175,19 @@ public class UserController {
         }
         boolean b = userService.removeById(id);
         return ResultUtils.success(b);
+    }
+
+    @PostMapping("/update")
+    public BaseResponse<Integer> updateUser(@RequestBody UserDTO userDTO) {
+        //校验参数是否为空
+        if (userDTO == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+
+        User loginUser = userService.getLoginUser(userDTO.getCurrentUserAccount(), userDTO.getUuid());
+        Integer result = userService.updateUser(userDTO, loginUser);
+
+        return ResultUtils.success(result);
     }
 
 
