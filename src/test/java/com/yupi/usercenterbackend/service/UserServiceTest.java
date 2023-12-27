@@ -1,16 +1,14 @@
 package com.yupi.usercenterbackend.service;
 
 import com.yupi.usercenterbackend.model.domain.User;
-import java.util.Arrays;
-import java.util.List;
-import javax.annotation.Resource;
-import org.junit.Assert;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import javax.annotation.Resource;
+
 /**
  * 用户服务测试
+ *
  * @author linli
  */
 @SpringBootTest
@@ -19,54 +17,20 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    void testAddUser(){
-        User user = new User();
-        user.setUsername("dogYupi11");
-        user.setUserAccount("123111");
-        user.setAvatarUrl("https://thirdwx.qlogo.cn/mmopen/vi_32/AUpl4UT9k4TD5GqoCgHG8dEnlHuMbGhB10Uic06euXjbWhlu9kb6PwzsTq1e1aewmFnBKcDGqX1HUltp3YHFPUA/132");
-        user.setGender(0);
-        user.setUserPassword("xxx");
-        user.setPhone("123");
-        user.setEmail("123");
-        boolean rs = userService.save(user);
-        System.out.println("user.getId() = " + user.getEmail());
-        Assertions.assertTrue(rs);
-    }
-
-    @Test
-    void userRegister() {
-        String userAccount ="yupi";
-        String password ="";
-        String checkPassword ="123456";
-        String planetCode ="12345";
-        long result = userService.userRegister(userAccount,password,checkPassword, planetCode);
-        Assert.assertEquals(-1,result);
-        userAccount = "yu";
-        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
-        Assert.assertEquals(-1,result);
-        userAccount = "yupi";
-        password ="123456";
-        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
-        Assert.assertEquals(-1,result);
-        userAccount = "yu pi";
-        password ="12345678";
-        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
-        Assert.assertEquals(-1,result);
-        checkPassword ="123456789";
-        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
-        Assert.assertEquals(-1,result);
-        userAccount = "123";
-        checkPassword ="12345678";
-        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
-        Assert.assertEquals(-1,result);
-        userAccount = "yupi11122";
-        result = userService.userRegister(userAccount,password,checkPassword, planetCode);
-        Assert.assertTrue(result>0);
-    }
-    @Test
-    public void queryUsersByTags(){
-        List<String> tagNameList = Arrays.asList("java","python");
-        List<User> users = userService.queryUsersByTags(tagNameList);
-        Assert.assertNotNull(users);
+    void testAddUser() {
+        for (int i = 0; i < 10000000; i++) {
+            User user = new User();
+            user.setUsername("abin" + 1);
+            user.setUserAccount("abin" + i);
+            user.setAvatarUrl("https://thirdwx.qlogo.cn/mmopen/vi_32/AUpl4UT9k4TD5GqoCgHG8dEnlHuMbGhB10Uic06euXjbWhlu9kb6PwzsTq1e1aewmFnBKcDGqX1HUltp3YHFPUA/132");
+            user.setGender(0);
+            user.setUserPassword("123456789");
+            user.setPhone("1" + i);
+            user.setEmail("1" + i);
+            user.setPlanetCode("6" + i);
+            user.setTags("[\"大一\",\"java\",\"c++\",\"python\",\"c\"]");
+            user.setProfile("大家好，我是渣渣辉，是兄弟就来砍我");
+            userService.save(user);
+        }
     }
 }

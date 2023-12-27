@@ -1,10 +1,12 @@
 package com.yupi.usercenterbackend.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.yupi.usercenterbackend.model.domain.User;
+import com.yupi.usercenterbackend.model.domain.dto.UserDTO;
+import com.yupi.usercenterbackend.model.domain.request.SearchUserByTagsRequest;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.List;
 
 /**
  * @author linli
@@ -13,49 +15,86 @@ import java.util.List;
  */
 public interface UserService extends IService<User> {
 
-  /**
-   * 用户注册
-   *
-   * @param userAccount 用户账户
-   * @param userPassword 用户密码
-   * @param checkPassword 校验密码
-   * @param planetCode 星球编号
-   * @return 新用户 id
-   */
-  long userRegister(
-      String userAccount, String userPassword, String checkPassword, String planetCode);
+    /**
+     * 用户注册
+     *
+     * @param userAccount   用户账户
+     * @param userPassword  用户密码
+     * @param checkPassword 校验密码
+     * @param planetCode    星球编号
+     * @return 新用户 id
+     */
+    long userRegister(
+            String userAccount, String userPassword, String checkPassword, String planetCode);
 
-  /**
-   * 用户登录
-   *
-   * @param userAccount 用户账户
-   * @param userPassword 用户密码
-   * @param request
-   * @return 脱敏后的用户信息
-   */
-  String userLogin(String userAccount, String userPassword,String uuid, HttpServletRequest request);
+    /**
+     * 用户登录
+     *
+     * @param userAccount  用户账户
+     * @param userPassword 用户密码
+     * @param request
+     * @return 脱敏后的用户信息
+     */
+    String userLogin(String userAccount, String userPassword, String uuid);
 
-  /**
-   * 用户脱敏
+    /**
+     * 获取当前登录用户信息
+     *
+     * @param userAccount
+     * @param uuid
+     * @return
+     */
+    User getLoginUser(String userAccount, String uuid);
+
+    /**
+     * 用户脱敏
+     *
+     * @param originUser
+     * @return
+     */
+    User getSafetyUser(User originUser);
+
+    /**
+     * 用户注销
+     *
+     * @param request
+     * @return
+     */
+    int userLogout(HttpServletRequest request);
+
+    /**
+     * 根据标签搜索用户
+     *
+     * @param tagList
+     * @return
+     */
+    Page<User> queryUsersByTags(SearchUserByTagsRequest byTagsRequest);
+
+    Page<User> queryUsersByTagsByMysql(SearchUserByTagsRequest byTagsRequest);
+
+    /**
+   * 修改用户信息
    *
-   * @param originUser
+   * @param userDTO
+   * @param LoginUser
    * @return
    */
-  User getSafetyUser(User originUser);
+  int updateUser(UserDTO userDTO, User LoginUser);
 
   /**
-   * 用户注销
+   * 是否为管理员
    *
-   * @param request
+   * @param userAccount
+   * @param uuid
    * @return
    */
-  int userLogout(HttpServletRequest request);
+  boolean isAdmin(String userAccount, String uuid);
 
-  /**
-   * 根据标签搜索用户
-   *
-   * @param tagList
-   * @return
-   */
-  List<User> queryUsersByTags(List<String> tagList);
+    /**
+     * 是否为管理员
+     *
+     * @param loginUser
+     * @return
+     */
+    boolean isAdmin(User loginUser);
 }
