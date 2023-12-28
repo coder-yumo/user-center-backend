@@ -21,16 +21,15 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static com.yupi.usercenterbackend.constant.RedisConstant.TOKEN_KEY;
 import static com.yupi.usercenterbackend.constant.RedisConstant.USER_SEARCH_KEY;
 
 @RestController
 @RequestMapping("/user")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8000"})
+//@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8000"})
+//@CrossOrigin(origins = {"http://101.35.26.98:3000", "http://101.35.26.98:8000"})
 @Slf4j
 public class UserController {
 
@@ -120,7 +119,7 @@ public class UserController {
     }
 
     @GetMapping("/search")
-    public BaseResponse<List<User>> searchUsers(String currentUserAccount, String username) {
+    public BaseResponse<Page<User>> searchUsers(long pageSize, long current,String currentUserAccount) {
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.lambda().eq(User::getUserAccount, currentUserAccount);
         User currentUser = userService.getOne(wrapper);
@@ -129,12 +128,12 @@ public class UserController {
         }
 
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        if (StringUtils.isNotBlank(username)) {
-            queryWrapper.like("username", username);
-        }
-        List<User> userList = userService.list(queryWrapper);
-        List<User> list = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
-        return ResultUtils.success(list);
+//        if (StringUtils.isNotBlank(username)) {
+//            queryWrapper.like("username", username);
+//        }
+        Page<User> userPage = userService.page(new Page<>(current, pageSize), queryWrapper);
+//        List<User> list = userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
+        return ResultUtils.success(userPage);
     }
 
     @GetMapping("/recommend")
