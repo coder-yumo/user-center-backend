@@ -15,9 +15,12 @@ create table user
     updateTime   datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP,
     isDelete     tinyint  default 0                 null comment '是否删除',
     userRole     int      default 0                 null comment '用户角色 0-普通用户，1-管理员',
-    planetCode   varchar(512)                       null comment '星球编号'
+    planetCode   varchar(512)                       null comment '星球编号',
+    tags         varchar(1024)                      null comment '标签',
+    profile      varchar(1024)                      null comment '个人简介'
 )
     comment '用户表';
+
 
 -- auto-generated definition
 create table tag
