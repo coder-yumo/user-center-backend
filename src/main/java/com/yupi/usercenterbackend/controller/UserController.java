@@ -29,7 +29,7 @@ import static com.yupi.usercenterbackend.constant.RedisConstant.USER_SEARCH_KEY;
 @RestController
 @RequestMapping("/user")
 //@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8000"})
-@CrossOrigin(origins = {"http://user.code-li.fun/", "http://101.35.26.98:8000"})
+//@CrossOrigin(origins = {"http://user.code-li.fun/", "http://101.35.26.98:8000"})
 @Slf4j
 public class UserController {
 
